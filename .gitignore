@@ -1,0 +1,16 @@
+*.vs
+**/bin
+**/obj
+**/*.csproj.user
+
+src/EShop.BackEnd/tempkey.rsa
+
+EShop.UnitTest/**/*coverage*
+
+TestResults/
+
+src/back-office/.vscode/
+
+src/back-office/yarn.lock
+
+**/yarn.lock
