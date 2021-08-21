@@ -18,6 +18,11 @@ namespace ElasticNEST.Controllers
             "freezing", "bracing", "chilly", "cool", "mild", "warm", "balmy", "hot", "sweltering", "scorching"
         };
 
+        private static readonly string[] Code = new[]
+        {
+            "ctc-0001","ctz-0002","etz-0003","vta-0004","oar-0005","bbb-0006","xzc-0007"
+        };
+
         private readonly ILogger<NESTController> _logger;
         private readonly ElasticClient _elasticClient;
 
@@ -50,6 +55,12 @@ namespace ElasticNEST.Controllers
                 Query = request.SearchText
             };
 
+            query |= new QueryStringQuery
+            {
+                Query = $"\"{request.SearchText}\"",
+                Boost = 50
+            };
+
             var functions = new List<IScoreFunction>();
 
             foreach (var item in sfConfig)
@@ -73,7 +84,7 @@ namespace ElasticNEST.Controllers
                 Name = "named_query",
                 Boost = 1.1,
                 Query = query,
-                BoostMode = FunctionBoostMode.Multiply,
+                BoostMode = FunctionBoostMode.Sum,
                 ScoreMode = FunctionScoreMode.Sum,
                 MinScore = 1.0,
                 Functions = functions
@@ -101,7 +112,7 @@ namespace ElasticNEST.Controllers
                     new MyIndexDocument
                     {
                         Title = $"{Summaries[0]} {Summaries[0]} {Summaries[2]}",
-                        Code = $"{Summaries[3]} {Summaries[4]} {Summaries[5]}",
+                        Code = $"{Code[0]}",
                         Target = new List<string>
                         {
                             $"{Summaries[0]} {Summaries[1]}",
@@ -111,7 +122,7 @@ namespace ElasticNEST.Controllers
                     new MyIndexDocument
                     {
                         Title = $"{Summaries[0]} {Summaries[1]} {Summaries[4]}",
-                        Code = $"{Summaries[0]} {Summaries[4]} {Summaries[2]}",
+                        Code = $"{Code[1]}",
                         Target = new List<string>
                         {
                             $"{Summaries[0]} {Summaries[5]}",
@@ -121,7 +132,7 @@ namespace ElasticNEST.Controllers
                     new MyIndexDocument
                     {
                         Title = $"{Summaries[2]} {Summaries[1]} {Summaries[0]}",
-                        Code = $"{Summaries[7]} {Summaries[8]} {Summaries[9]}",
+                        Code = $"{Code[2]}",
                         Target = new List<string>
                         {
                             $"{Summaries[7]} {Summaries[1]}",
@@ -131,7 +142,7 @@ namespace ElasticNEST.Controllers
                     new MyIndexDocument
                     {
                         Title = $"{Summaries[9]} {Summaries[1]} {Summaries[2]} {Summaries[9]}",
-                        Code = $"{Summaries[8]} {Summaries[9]} {Summaries[7]}",
+                        Code = $"{Code[3]}",
                         Target = new List<string>
                         {
                             $"{Summaries[4]} {Summaries[6]}",
@@ -141,7 +152,7 @@ namespace ElasticNEST.Controllers
                     new MyIndexDocument
                     {
                         Title = $"{Summaries[7]} {Summaries[1]} {Summaries[2]}",
-                        Code = $"{Summaries[0]} {Summaries[1]} {Summaries[2]}",
+                        Code = $"{Code[4]}",
                         Target = new List<string>
                         {
                             $"{Summaries[0]} {Summaries[1]}",
@@ -151,7 +162,7 @@ namespace ElasticNEST.Controllers
                     new MyIndexDocument
                     {
                         Title = $"{Summaries[4]} {Summaries[1]} {Summaries[3]}",
-                        Code = $"{Summaries[0]} {Summaries[2]} {Summaries[4]}",
+                        Code = $"{Code[5]}",
                         Target = new List<string>
                         {
                             $"{Summaries[6]} {Summaries[8]}",
