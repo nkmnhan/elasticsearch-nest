@@ -5,8 +5,6 @@ using Microsoft.Extensions.Logging;
 using Nest;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace ElasticNEST.Controllers
@@ -33,21 +31,57 @@ namespace ElasticNEST.Controllers
         [HttpPost]
         public IActionResult Search([FromBody] Requests.SearchRequest request)
         {
-            var query = BoostConstant(new MatchQuery
-            {
-                Field = "title",
-                Query = request.SearchText
-            }, 2);
+            var sfConfig = new Dictionary<string, int>() {
+                { "title", 10 } ,
+                { "code", 20 },
+                { "target", 2 }
+            };
+            var splitTexts = request.SearchText.Split(' ');
 
-            query |= BoostConstant(new MatchQuery
+            var query = new QueryContainer();
+
+            var titleField = Infer.Field<MyIndexDocument>(p => p.Title, 4);
+            var bodyField = Infer.Field<MyIndexDocument>(p => p.Code, 10);
+            var targetField = Infer.Field<MyIndexDocument>(p => p.Target, 2);
+
+            query |= new MultiMatchQuery
             {
-                Field = "code",
+                Fields = titleField.And(bodyField).And(targetField),
                 Query = request.SearchText
-            }, 1);
+            };
+
+            var functions = new List<IScoreFunction>();
+
+            foreach (var item in sfConfig)
+            {
+                foreach (var text in splitTexts)
+                {
+                    functions.Add(new WeightFunction
+                    {
+                        Filter = new MatchQuery
+                        {
+                            Field = item.Key,
+                            Query = text
+                        },
+                        Weight = item.Value
+                    });
+                }
+            }
+
+            var fsQuery = new FunctionScoreQuery()
+            {
+                Name = "named_query",
+                Boost = 1.1,
+                Query = query,
+                BoostMode = FunctionBoostMode.Multiply,
+                ScoreMode = FunctionScoreMode.Sum,
+                MinScore = 1.0,
+                Functions = functions
+            };
 
             var searchDescriptor = new SearchDescriptor<MyIndexDocument>()
                 .Index("my-index")
-                .Query(x => query)
+                .Query(q => q.FunctionScore(fs => fsQuery))
                 .Explain();
 
             var json = _elasticClient.RequestResponseSerializer.SerializeToString(searchDescriptor);
@@ -66,7 +100,7 @@ namespace ElasticNEST.Controllers
                 var items = new List<MyIndexDocument> {
                     new MyIndexDocument
                     {
-                        Title = $"{Summaries[0]} {Summaries[1]} {Summaries[2]}",
+                        Title = $"{Summaries[0]} {Summaries[0]} {Summaries[2]}",
                         Code = $"{Summaries[3]} {Summaries[4]} {Summaries[5]}",
                         Target = new List<string>
                         {
@@ -96,7 +130,7 @@ namespace ElasticNEST.Controllers
                     },
                     new MyIndexDocument
                     {
-                        Title = $"{Summaries[0]} {Summaries[1]} {Summaries[2]} {Summaries[9]}",
+                        Title = $"{Summaries[9]} {Summaries[1]} {Summaries[2]} {Summaries[9]}",
                         Code = $"{Summaries[8]} {Summaries[9]} {Summaries[7]}",
                         Target = new List<string>
                         {
@@ -106,7 +140,7 @@ namespace ElasticNEST.Controllers
                     },
                     new MyIndexDocument
                     {
-                        Title = $"{Summaries[0]} {Summaries[1]} {Summaries[2]}",
+                        Title = $"{Summaries[7]} {Summaries[1]} {Summaries[2]}",
                         Code = $"{Summaries[0]} {Summaries[1]} {Summaries[2]}",
                         Target = new List<string>
                         {
@@ -116,7 +150,7 @@ namespace ElasticNEST.Controllers
                     },
                     new MyIndexDocument
                     {
-                        Title = $"{Summaries[0]} {Summaries[1]} {Summaries[3]}",
+                        Title = $"{Summaries[4]} {Summaries[1]} {Summaries[3]}",
                         Code = $"{Summaries[0]} {Summaries[2]} {Summaries[4]}",
                         Target = new List<string>
                         {
